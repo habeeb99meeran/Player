@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMDB Video Embed Player</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #121827;
+      --panel-2: #182033;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #e50914;
+      --border: #273449;
+      --danger: #f97373;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #182033 0, var(--bg) 42%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 18px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 5vw, 48px);
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.3fr 0.8fr 0.7fr 0.7fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    input, select, button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 13px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(229,9,20,0.16);
+    }
+
+    button {
+      cursor: pointer;
+      border-color: transparent;
+      background: var(--accent);
+      font-weight: 700;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: .92;
+    }
+
+    .options {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .options input {
+      width: auto;
+      accent-color: var(--accent);
+    }
+
+    .player-shell {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      position: relative;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    .placeholder {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 28px;
+      color: var(--muted);
+    }
+
+    .url-box {
+      margin-top: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: var(--muted);
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .warning {
+      margin-top: 18px;
+      border: 1px solid rgba(249,115,115,.35);
+      color: #fecaca;
+      background: rgba(127,29,29,.22);
+      border-radius: 16px;
+      padding: 13px 15px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 850px) {
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .controls .full-mobile {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 20px 12px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>TMDB Embed Player</h1>
+      <p>Enter a TMDB movie or TV show ID, choose the content type, and load the embedded player.</p>
+    </header>
+
+    <section class="card">
+      <div class="controls">
+        <div class="full-mobile">
+          <label for="tmdbId">TMDB ID</label>
+          <input id="tmdbId" type="text" inputmode="numeric" placeholder="Example: 27205" />
+        </div>
+
+        <div>
+          <label for="type">Type</label>
+          <select id="type">
+            <option value="movie">Movie</option>
+            <option value="tv">TV Episode</option>
+          </select>
+        </div>
+
+        <div id="seasonBox" style="display:none;">
+          <label for="season">Season</label>
+          <input id="season" type="number" min="1" value="1" />
+        </div>
+
+        <div id="episodeBox" style="display:none;">
+          <label for="episode">Episode</label>
+          <input id="episode" type="number" min="1" value="1" />
+        </div>
+
+        <div>
+          <label>&nbsp;</label>
+          <button id="loadBtn">Load</button>
+        </div>
+      </div>
+
+      <div class="options">
+        <label><input id="autoPlay" type="checkbox" /> Autoplay</label>
+        <label><input id="nextEpisode" type="checkbox" checked /> Next episode button</label>
+        <label><input id="episodeSelector" type="checkbox" checked /> Episode selector</label>
+      </div>
+
+      <div class="player-shell" id="playerShell">
+        <div class="placeholder">
+          <div>
+            <strong>No video loaded yet.</strong>
+            <p>Paste a TMDB ID above and click Load.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="url-box" id="embedUrl">Embed URL will appear here.</div>
+
+      <div class="warning">
+        This page only embeds a third-party player using a TMDB ID. TMDB provides metadata, not movie files. Only use streaming sources that you have the legal right to show.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tmdbIdInput = document.getElementById('tmdbId');
+    const typeSelect = document.getElementById('type');
+    const seasonInput = document.getElementById('season');
+    const episodeInput = document.getElementById('episode');
+    const seasonBox = document.getElementById('seasonBox');
+    const episodeBox = document.getElementById('episodeBox');
+    const loadBtn = document.getElementById('loadBtn');
+    const playerShell = document.getElementById('playerShell');
+    const embedUrlBox = document.getElementById('embedUrl');
+    const autoPlayInput = document.getElementById('autoPlay');
+    const nextEpisodeInput = document.getElementById('nextEpisode');
+    const episodeSelectorInput = document.getElementById('episodeSelector');
+
+    function updateTypeFields() {
+      const isTv = typeSelect.value === 'tv';
+      seasonBox.style.display = isTv ? 'block' : 'none';
+      episodeBox.style.display = isTv ? 'block' : 'none';
+    }
+
+    function cleanNumber(value) {
+      return String(value || '').trim().replace(/[^0-9]/g, '');
+    }
+
+    function buildEmbedUrl() {
+      const tmdbId = cleanNumber(tmdbIdInput.value);
+      const type = typeSelect.value;
+
+      if (!tmdbId) {
+        alert('Please enter a valid TMDB ID.');
+        return null;
+      }
+
+      let url = `https://www.vidking.net/embed/movie/${tmdbId}`;
+
+      if (type === 'tv') {
+        const season = cleanNumber(seasonInput.value) || '1';
+        const episode = cleanNumber(episodeInput.value) || '1';
+        url = `https://www.vidking.net/embed/tv/${tmdbId}/${season}/${episode}`;
+      }
+
+      const params = new URLSearchParams({
+        color: 'e50914',
+        autoPlay: autoPlayInput.checked ? 'true' : 'false'
+      });
+
+      if (type === 'tv') {
+        params.set('nextEpisode', nextEpisodeInput.checked ? 'true' : 'false');
+        params.set('episodeSelector', episodeSelectorInput.checked ? 'true' : 'false');
+      }
+
+      return `${url}?${params.toString()}`;
+    }
+
+    function loadPlayer() {
+      const embedUrl = buildEmbedUrl();
+      if (!embedUrl) return;
+
+      playerShell.innerHTML = '';
+
+      const iframe = document.createElement('iframe');
+      iframe.src = embedUrl;
+      iframe.allowFullscreen = true;
+      iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+      iframe.referrerPolicy = 'no-referrer-when-downgrade';
+
+      playerShell.appendChild(iframe);
+      embedUrlBox.textContent = embedUrl;
+    }
+
+    typeSelect.addEventListener('change', updateTypeFields);
+    loadBtn.addEventListener('click', loadPlayer);
+
+    tmdbIdInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') loadPlayer();
+    });
+
+    updateTypeFields();
+  </script>
+</body>
+</html>
